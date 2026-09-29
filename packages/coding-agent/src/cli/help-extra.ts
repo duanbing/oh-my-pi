@@ -25,6 +25,7 @@ export function getExtraHelpText(): string {
   XAI_API_KEY                - xAI Grok models
   OPENROUTER_API_KEY         - OpenRouter aggregated models
   KILO_API_KEY               - Kilo Gateway models
+  ROUTERBASE_API_KEY         - RouterBase gateway models
   MISTRAL_API_KEY            - Mistral models
   ZAI_API_KEY                - z.ai models (ZhipuAI/GLM)
   UMANS_AI_CODING_PLAN_API_KEY - Umans AI Coding Plan models

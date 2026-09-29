@@ -5061,6 +5061,75 @@ export function stepfunModelManagerOptions(
 }
 
 // ---------------------------------------------------------------------------
+// 16.10 RouterBase
+// ---------------------------------------------------------------------------
+
+/**
+ * RouterBase discovery configuration: the API key plus optional base-URL and
+ * fetch overrides. Consumed by {@link routerbaseModelManagerOptions}, and
+ * exported for extensions and tests that construct the manager directly.
+ */
+export interface RouterbaseModelManagerConfig {
+	apiKey?: string;
+	baseUrl?: string;
+	fetch?: FetchImpl;
+}
+
+/**
+ * Whether a RouterBase `/v1/models` row is a chat model omp can route. The
+ * roster tags every row with a `modality`; the non-chat values are listed in
+ * `runtime/behavior.kdl` (`exclude-discovery-modes provider="routerbase"`). A
+ * row without a string `modality` stays selectable.
+ */
+export function isRouterbaseChatModality(modality: unknown): boolean {
+	return typeof modality !== "string" || !isExcludedDiscoveryMode("routerbase", modality);
+}
+
+/**
+ * Map a RouterBase `/v1/models` row. Bundled ids keep their seed row
+ * (`providers/routerbase.kdl`) and take the live `context_length` /
+ * `max_completion_tokens`. An id RouterBase adds later has no seed row, so its
+ * limits and capabilities come from the row itself: `input_modalities` and
+ * `supported_parameters` (`tools`, `reasoning`) as reported. `pricing` is never
+ * read: it is RouterBase's list price, not what the key is charged.
+ */
+function mapRouterbaseModel(
+	entry: OpenAICompatibleModelRecord,
+	defaults: ModelSpec<"openai-completions">,
+	reference: ModelSpec<"openai-completions"> | undefined,
+): ModelSpec<"openai-completions"> {
+	const mapped = mapWithBundledReference(entry, defaults, reference);
+	if (reference) return mapped;
+	const params = Array.isArray(entry.supported_parameters) ? entry.supported_parameters : undefined;
+	return {
+		...mapped,
+		contextWindow: toPositiveNumber(entry.context_length, mapped.contextWindow),
+		maxTokens: toPositiveNumber(entry.max_completion_tokens, mapped.maxTokens),
+		...(Array.isArray(entry.input_modalities) && { input: toInputCapabilities(entry.input_modalities) }),
+		...(params && { reasoning: params.includes("reasoning"), supportsTools: params.includes("tools") }),
+	};
+}
+
+/**
+ * RouterBase model manager: OpenAI-compatible chat completions at
+ * `routerbase.com/v1`. Discovery merges additively over the bundled seed rows,
+ * so ids RouterBase ships later become selectable without an omp release.
+ */
+export function routerbaseModelManagerOptions(
+	config?: RouterbaseModelManagerConfig,
+): ModelManagerOptions<"openai-completions"> {
+	return createOpenAICompatibleModelManagerOptions({
+		api: "openai-completions",
+		providerId: "routerbase",
+		defaultBaseUrl: "https://routerbase.com/v1",
+		config,
+		requireApiKey: true,
+		filterModel: entry => isRouterbaseChatModality(entry.modality),
+		mapModel: mapRouterbaseModel,
+	});
+}
+
+// ---------------------------------------------------------------------------
 // 17. Qwen Portal
 // ---------------------------------------------------------------------------
 

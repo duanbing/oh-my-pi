@@ -1360,6 +1360,27 @@ Qwen Portal provides access to Qwen hosted models via an OpenAI-compatible endpo
 - **Catalog configuration**: Registered in `descriptors.ts:383` with default model `coder-model`, discovery label `"Qwen Portal"`, and `oauthProvider: "qwen-portal"`.
 - **Static model definitions**: Exposes pre-defined static models in `packages/catalog/src/models.json`: `coder-model` (Qwen Coder) and `vision-model` (Qwen Vision, supporting `text` and `image` modalities).
 
+## RouterBase (`routerbase`)
+RouterBase is an OpenAI-compatible gateway at `https://routerbase.com/v1` serving chat models from several labs (Anthropic, OpenAI, Google, DeepSeek, Qwen, GLM, Kimi, MiniMax) under `vendor/name` ids (`deepseek/deepseek-v4.1-flash`, `anthropic/claude-sonnet-5`). It uses the OpenAI Chat Completions transport (`openai-completions`).
+
+### Special casings
+- **`max_tokens` Only**: `packages/catalog/src/compat/rules/providers/routerbase.kdl` sets `max-tokens-field "max_tokens"`. RouterBase's request schema types `max_tokens`; `max_completion_tokens` is not one of its typed fields.
+- **No `developer` Role**: The same file sets `supports-developer-role #false` and `supports-store #false`. RouterBase lifts `system` messages into the upstream system prompt and has no `developer` role, so system prompts stay on `system`.
+- **`reasoning_content` Reasoning Field**: Reasoning arrives as `reasoning_content` on the final message and on streamed deltas (`reasoning-content-field "reasoning_content"`).
+- **Effort Ladders From Class Rules**: The provider file declares no thinking axes. Each row's ladder resolves from its lineage's class rules (`classes/*.kdl`), the same as other hosts serving those models.
+- **Non-Chat Roster Filtering**: `/v1/models` lists image, video, audio and embedding models beside the chat roster, each tagged with a `modality` field. `isRouterbaseChatModality` in `packages/catalog/src/provider-models/openai-compat.ts` drops them using the `exclude-discovery-modes provider="routerbase"` policy in `packages/catalog/src/compat/rules/runtime/behavior.kdl`; a row without a `modality` stays selectable.
+
+### Auth & usage
+- **Environment Variable**: Authenticates via `ROUTERBASE_API_KEY` (provider entry in `packages/catalog/src/compat/rules/providers/routerbase.kdl`).
+- **API Key Login**: Declared in `packages/catalog/src/compat/rules/auth/routerbase.kdl` as a `login "api-key"` rule with console URL `https://routerbase.com/api-keys` and placeholder `sk-rb-...`. `/v1/models` answers without a key, so validation is a chat-completions call to `deepseek/deepseek-v4.1-flash` (`optional=#true`: only a 401/403 rejects the key).
+- **No Usage Tracking**: No quota or usage module under `packages/ai/src/usage/`.
+
+### Catalog model handling
+- **Descriptor Configuration**: `routerbaseModelManagerOptions` is registered in `packages/catalog/src/provider-models/descriptors.ts` with `defaultModel: "deepseek/deepseek-v4.1-flash"`, `envVars: ["ROUTERBASE_API_KEY"]`, and discovery label `RouterBase`.
+- **Seeded Bundle**: `providers/routerbase.kdl` carries `seed bundle="always"` rows with RouterBase's limits and per-token charges, so the provider is selectable before first discovery. `skip-cross-provider-reference-fills #true` keeps other hosts' same-id rows from overwriting them.
+- **Seed Costs Are Charged Rates**: `/v1/models` reports a `pricing` object at list price, while RouterBase bills a per-model discount off list. Discovery never reads `pricing`; bundled rows keep the seed's charged rate, and an id with no seed row stays unpriced. A seed row with no cache tariff carries `cache-read` equal to `input`, because RouterBase bills cached input at the input rate for those models.
+- **Additive Live Discovery**: Discovery is not authoritative. `mapRouterbaseModel` keeps each seed row, takes the live `context_length` and `max_completion_tokens`, and adds ids RouterBase ships later with limits, `input_modalities` and `supported_parameters` (`tools`, `reasoning`) read from the row.
+
 ## Sakana AI (`sakana`)
 Sakana AI provides reasoning models from the Fugu model family hosted via `api.sakana.ai`.
 Requests are routed through the stateful OpenAI Responses transport (`api: "openai-responses"`).

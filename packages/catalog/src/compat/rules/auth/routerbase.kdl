@@ -1,0 +1,12 @@
+auth "routerbase" {
+	name "RouterBase"
+	login "api-key" {
+		auth-url "https://routerbase.com/api-keys"
+		instructions "Create or copy your RouterBase API key"
+		prompt "Paste your RouterBase API key" placeholder="sk-rb-..."
+		// `/v1/models` answers without a key, so only an inference call can
+		// reject a bad one. A 401/403 is fatal; any other failure skips
+		// validation and trusts the key.
+		validate "chat-completions" label="RouterBase" base-url="https://routerbase.com/v1" model="deepseek/deepseek-v4.1-flash" max-tokens-field="max_tokens" optional=#true
+	}
+}

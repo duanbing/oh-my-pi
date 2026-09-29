@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- Added RouterBase as a built-in provider with `deepseek/deepseek-v4.1-flash` as the default model and live `/v1/models` discovery
+
 ## [18.4.3] - 2026-09-28
 
 ### Added

@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- Added RouterBase to the `/login` provider list and `ROUTERBASE_API_KEY` to the `--help` environment list
+
 ## [18.4.3] - 2026-09-28
 
 ### Added
